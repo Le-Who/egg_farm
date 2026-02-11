@@ -7,5 +7,8 @@
   "types": "./types.ts",
   "dependencies": {
     "@colyseus/schema": "^2.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }

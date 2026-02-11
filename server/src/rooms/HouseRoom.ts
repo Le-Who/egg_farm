@@ -41,6 +41,27 @@ export class HouseRoom extends Room<HouseState> {
   private iapService = new IAPService(this.userRepo, this.inventoryRepo);
   private ownerId: string = "";
 
+  // Demo Mode In-Memory State
+  private demoCoins: number = 500;
+  private demoInventory: Map<string, number> = new Map([
+    ["chair_wood", 2],
+    ["table_wood", 1],
+    ["rug_red", 1],
+    ["seed_mint", 5],
+    ["egg_basic", 1],
+  ]);
+  private demoPets: any[] = [
+    {
+      id: "demo-pet-1",
+      petType: "slime_grass",
+      name: "Demo Slime",
+      level: 1,
+      hunger: 80,
+      isActive: true,
+      rarity: "common",
+    },
+  ];
+
   async onCreate(options: { ownerId: string }) {
     this.setState(new HouseState());
     this.ownerId = options.ownerId;
@@ -115,17 +136,7 @@ export class HouseRoom extends Room<HouseState> {
       console.warn(
         "[HouseRoom] DB Error loading pets (Demo Mode): Sending mock pet.",
       );
-      pets = [
-        {
-          id: "demo-pet-1",
-          petType: "slime_grass",
-          name: "Demo Slime",
-          level: 1,
-          hunger: 100,
-          isActive: true,
-          rarity: "common",
-        },
-      ];
+      pets = this.demoPets;
     }
     client.send("pets_list", pets);
   }
@@ -138,11 +149,12 @@ export class HouseRoom extends Room<HouseState> {
       console.warn(
         "[HouseRoom] DB Error loading inventory (Demo Mode): Sending mock items.",
       );
-      items = [
-        { itemId: "chair_wood", quantity: 5 },
-        { itemId: "table_wood", quantity: 2 },
-        { itemId: "rug_red", quantity: 1 },
-      ];
+      items = Array.from(this.demoInventory.entries()).map(
+        ([itemId, quantity]) => ({
+          itemId,
+          quantity,
+        }),
+      );
     }
     client.send("inventory_list", items);
   }
@@ -189,10 +201,20 @@ export class HouseRoom extends Room<HouseState> {
         gridX,
         gridY,
       );
+      // Consume from inventory (if applicable logic exists for furniture)
+      // MVP: We assume placement consumes 1 from inventory if it's not "unlimited"
+      // But for now, let's just proceed.
     } catch (err) {
       console.warn("[HouseRoom] DB Error on place (Demo Mode):", err);
-      // Fallback for demo
-      record.id = "demo-" + Math.random().toString(36).substr(2, 9);
+      // Fallback for demo: Check/Consume Demo Inventory
+      const qty = this.demoInventory.get(itemId) || 0;
+      if (qty > 0) {
+        this.demoInventory.set(itemId, qty - 1);
+        record.id = "demo-" + Math.random().toString(36).substr(2, 9);
+      } else {
+        client.send("error", { message: "Not enough items (Demo)" });
+        return;
+      }
     }
 
     // Update synced state
@@ -282,23 +304,42 @@ export class HouseRoom extends Room<HouseState> {
     }
 
     // Deduct seed from inventory
-    const removed = await this.inventoryRepo.removeItem(
-      this.ownerId,
-      seedItemId,
-      1,
-    );
-    if (!removed) {
-      client.send("error", { message: "No seeds in inventory" });
-      return;
+    try {
+      const removed = await this.inventoryRepo.removeItem(
+        this.ownerId,
+        seedItemId,
+        1,
+      );
+      if (!removed) {
+        client.send("error", { message: "No seeds in inventory" });
+        return;
+      }
+    } catch (err) {
+      // Demo fallback
+      const qty = this.demoInventory.get(seedItemId) || 0;
+      if (qty > 0) {
+        this.demoInventory.set(seedItemId, qty - 1);
+      } else {
+        client.send("error", { message: "No seeds in inventory (Demo)" });
+        return;
+      }
     }
 
-    // Place as a house_item with planting state
-    const record = await this.houseItemRepo.place(
-      this.ownerId,
-      seedItemId,
-      gridX,
-      gridY,
-    );
+    let record = { id: "", itemId: seedItemId, gridX, gridY };
+
+    try {
+      // Place as a house_item with planting state
+      record = await this.houseItemRepo.place(
+        this.ownerId,
+        seedItemId,
+        gridX,
+        gridY,
+      );
+    } catch (err) {
+      // Demo fallback
+      record.id = "demo-plant-" + Math.random().toString(36).substr(2, 9);
+    }
+
     // TODO: update record state with planted_at timestamp via DB
 
     const furniture = new FurnitureSchema();
@@ -335,17 +376,27 @@ export class HouseRoom extends Room<HouseState> {
     }
 
     // Grant rewards
-    for (const yield_ of plantCfg.harvestYield) {
-      await this.inventoryRepo.addItem(
-        this.ownerId,
-        yield_.itemId,
-        yield_.quantity,
-      );
-    }
-    await this.userRepo.updateCoins(this.ownerId, plantCfg.coinReward);
+    try {
+      for (const yield_ of plantCfg.harvestYield) {
+        await this.inventoryRepo.addItem(
+          this.ownerId,
+          yield_.itemId,
+          yield_.quantity,
+        );
+      }
+      await this.userRepo.updateCoins(this.ownerId, plantCfg.coinReward);
 
-    // Clear the tile
-    await this.houseItemRepo.remove(houseItemId);
+      // Clear the tile
+      await this.houseItemRepo.remove(houseItemId);
+    } catch (err) {
+      // Demo logic
+      for (const yield_ of plantCfg.harvestYield) {
+        const current = this.demoInventory.get(yield_.itemId) || 0;
+        this.demoInventory.set(yield_.itemId, current + yield_.quantity);
+      }
+      this.demoCoins += plantCfg.coinReward;
+    }
+
     this.state.furniture.delete(houseItemId);
 
     client.send("harvest_ok", {
@@ -377,12 +428,23 @@ export class HouseRoom extends Room<HouseState> {
     } catch (err) {
       console.warn("[HouseRoom] DB Error on buy (Demo Mode):", err);
       // Mock success for demo
-      client.send("buy_ok", {
-        itemId: payload.itemId,
-        quantity: payload.quantity,
-        cost: 100,
-        newBalance: 9999,
-      });
+      const itemDef = getItemDef(payload.itemId);
+      const cost = (itemDef?.price || 10) * payload.quantity;
+
+      if (this.demoCoins >= cost) {
+        this.demoCoins -= cost;
+        const currentQty = this.demoInventory.get(payload.itemId) || 0;
+        this.demoInventory.set(payload.itemId, currentQty + payload.quantity);
+
+        client.send("buy_ok", {
+          itemId: payload.itemId,
+          quantity: payload.quantity,
+          cost: cost,
+          newBalance: this.demoCoins,
+        });
+      } else {
+        client.send("error", { message: "Not enough coins (Demo)" });
+      }
     }
   }
 
@@ -401,9 +463,15 @@ export class HouseRoom extends Room<HouseState> {
       await this.inventoryRepo.removeItem(this.ownerId, "egg_basic", 1);
     } catch (err) {
       console.warn(
-        "[HouseRoom] DB Error on hatch (Demo Mode): Skipping inventory check.",
+        "[HouseRoom] DB Error on hatch (Demo Mode): Checking demo inventory.",
         err,
       );
+      const eggs = this.demoInventory.get("egg_basic") || 0;
+      if (eggs < 1) {
+        client.send("error", { message: "No eggs in inventory (Demo)" });
+        return;
+      }
+      this.demoInventory.set("egg_basic", eggs - 1);
     }
 
     // Gacha roll (pure function, no DB)
@@ -420,6 +488,15 @@ export class HouseRoom extends Room<HouseState> {
         "[HouseRoom] DB Error on create pet (Demo Mode): Using mock ID.",
         err,
       );
+      this.demoPets.push({
+        id: petId,
+        petType: rolled.petType,
+        name: rolled.name,
+        level: 1,
+        hunger: 100,
+        isActive: false,
+        rarity: rolled.rarity,
+      });
     }
 
     client.send("hatch_ok", {
@@ -436,19 +513,35 @@ export class HouseRoom extends Room<HouseState> {
   ) {
     const { petId } = payload;
 
-    const success = await this.petRepo.setActive(this.ownerId, petId);
-    if (!success) {
-      client.send("error", { message: "Pet not found" });
-      return;
+    try {
+      const success = await this.petRepo.setActive(this.ownerId, petId);
+      if (!success) {
+        client.send("error", { message: "Pet not found" });
+        return;
+      }
+
+      const pet = await this.petRepo.findById(petId);
+      const config = pet ? getPetTypeConfig(pet.petType) : null;
+
+      client.send("pet_activated", {
+        petId,
+        growthSpeedMod: config?.growthSpeedMod ?? 1,
+      });
+    } catch (err) {
+      console.warn("[HouseRoom] DB Error setActive (Demo Mode)", err);
+      // Demo logic
+      const pet = this.demoPets.find((p) => p.id === petId);
+      if (pet) {
+        this.demoPets.forEach((p) => (p.isActive = false));
+        pet.isActive = true;
+
+        const config = getPetTypeConfig(pet.petType);
+        client.send("pet_activated", {
+          petId,
+          growthSpeedMod: config?.growthSpeedMod ?? 1,
+        });
+      }
     }
-
-    const pet = await this.petRepo.findById(petId);
-    const config = pet ? getPetTypeConfig(pet.petType) : null;
-
-    client.send("pet_activated", {
-      petId,
-      growthSpeedMod: config?.growthSpeedMod ?? 1,
-    });
   }
 
   private async handlePurchaseGems(
