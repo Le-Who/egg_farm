@@ -45,6 +45,7 @@ export class HouseRoom extends Room<HouseState> {
     this.setState(new HouseState());
     this.ownerId = options.ownerId;
     this.state.ownerId = options.ownerId;
+    console.log(`[HouseRoom] Room created for owner: ${this.ownerId}`);
 
     // Hydrate from DB
     await this.loadFurniture();
@@ -81,8 +82,14 @@ export class HouseRoom extends Room<HouseState> {
 
   async onJoin(
     client: Client,
-    options: { discordId: string; displayName?: string },
+    options: { ownerId: string; discordId: string; displayName?: string },
   ) {
+    console.log(
+      `[HouseRoom] Client joined: ${client.sessionId}, options:`,
+      options,
+    );
+    // Stub for real auth check later
+    // if (!await this.verifyToken(options.token)) ...discordId;
     const player = new PlayerSchema();
     player.odiscordId = options.discordId;
     player.odisplayName = options.displayName ?? "Guest";

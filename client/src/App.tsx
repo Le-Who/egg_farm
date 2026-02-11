@@ -1,10 +1,13 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { createPhaserGame } from './game/PhaserGame';
-import { HUD } from './ui/HUD';
-import { InventoryPanel } from './ui/InventoryPanel';
-import { ShopPanel } from './ui/ShopPanel';
-import { PetStatus } from './ui/PetStatus';
-import { NeighborsPanel } from './ui/NeighborsPanel';
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import { createPhaserGame } from "./game/PhaserGame";
+import { HUD } from "./ui/HUD";
+import { InventoryPanel } from "./ui/InventoryPanel";
+import { ShopPanel } from "./ui/ShopPanel";
+import { PetStatus } from "./ui/PetStatus";
+import { NeighborsPanel } from "./ui/NeighborsPanel";
+
+import { initDiscordSDK } from "./network/DiscordSDK";
+import { joinHouseRoom } from "./network/ColyseusClient";
 
 const App: React.FC = () => {
   const phaserRef = useRef<HTMLDivElement>(null);
@@ -15,9 +18,27 @@ const App: React.FC = () => {
   const [neighborsOpen, setNeighborsOpen] = useState(false);
 
   useEffect(() => {
+    // Initialize Phaser game
     if (phaserRef.current && !gameInstanceRef.current) {
       gameInstanceRef.current = createPhaserGame(phaserRef.current);
     }
+
+    // Initialize Network & Discord SDK
+    const initGame = async () => {
+      try {
+        console.log("[App] Initializing Discord SDK...");
+        const auth = await initDiscordSDK();
+        console.log("[App] Discord SDK initialized:", auth);
+
+        console.log(`[App] Joining HouseRoom for user ${auth.user.id}...`);
+        await joinHouseRoom(auth.user.id, auth.user.id);
+        console.log("[App] Joined room successfully.");
+      } catch (err) {
+        console.error("[App] Initialization failed:", err);
+      }
+    };
+
+    initGame();
 
     return () => {
       gameInstanceRef.current?.destroy(true);
@@ -56,16 +77,15 @@ const App: React.FC = () => {
 
 const styles: Record<string, React.CSSProperties> = {
   root: {
-    width: '100%',
-    height: '100%',
-    position: 'relative',
-    overflow: 'hidden',
+    width: "100%",
+    height: "100%",
+    position: "relative",
+    overflow: "hidden",
   },
   gameContainer: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
 };
 
 export default App;
-
