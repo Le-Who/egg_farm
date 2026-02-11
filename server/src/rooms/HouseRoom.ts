@@ -226,6 +226,7 @@ export class HouseRoom extends Room<HouseState> {
     this.state.furniture.set(record.id, furniture);
 
     client.send("place_ok", { id: record.id });
+    this.sendInventory(client);
   }
 
   private async handleRemoveItem(client: Client, payload: RemoveItemPayload) {
@@ -350,6 +351,7 @@ export class HouseRoom extends Room<HouseState> {
     this.state.furniture.set(record.id, furniture);
 
     client.send("plant_ok", { id: record.id, plantedAt: Date.now() });
+    this.sendInventory(client);
   }
 
   private async handleHarvest(client: Client, payload: HarvestPayload) {
@@ -404,6 +406,7 @@ export class HouseRoom extends Room<HouseState> {
       rewards: plantCfg.harvestYield,
       coins: plantCfg.coinReward,
     });
+    this.sendInventory(client);
   }
 
   private async handleBuyItem(client: Client, payload: BuyItemPayload) {
@@ -446,6 +449,7 @@ export class HouseRoom extends Room<HouseState> {
         client.send("error", { message: "Not enough coins (Demo)" });
       }
     }
+    this.sendInventory(client);
   }
 
   private async handleHatchEgg(client: Client, _payload: HatchEggPayload) {
@@ -505,6 +509,7 @@ export class HouseRoom extends Room<HouseState> {
       name: rolled.name,
       rarity: rolled.rarity,
     });
+    this.sendInventory(client);
   }
 
   private async handleSetActivePet(

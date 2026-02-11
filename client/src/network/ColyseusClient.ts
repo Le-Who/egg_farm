@@ -33,20 +33,41 @@ export async function joinHouseRoom(
   const c = getClient();
   room = await c.joinOrCreate("house", { ownerId, discordId });
 
-  // Listen for state changes and forward to EventBridge
-  room.state.furniture.onAdd((furniture: any, key: string) => {
-    EventBridge.emit("furniture_added", {
-      id: key,
-      itemId: furniture.itemId,
-      gridX: furniture.gridX,
-      gridY: furniture.gridY,
-    });
+  globalMyDiscordId = discordId;
+
+  registerMessageHandlers(room);
+
+  if (!sdkHandlersInitialized) {
+    setupEventBridgeListeners();
+    sdkHandlersInitialized = true;
+  }
+
+  return room;
+}
+
+/** Visit a friend's house by their Discord ID */
+export async function joinFriendRoom(
+  friendDiscordId: string,
+  myDiscordId: string,
+): Promise<Room<HouseState>> {
+  const c = getClient();
+  room = await c.joinOrCreate("house", {
+    ownerId: friendDiscordId,
+    discordId: myDiscordId,
   });
 
-  room.state.furniture.onRemove((_furniture: any, key: string) => {
-    EventBridge.emit("furniture_removed", key);
-  });
+  registerMessageHandlers(room);
 
+  EventBridge.emit("room_joined", {
+    ownerId: friendDiscordId,
+    isVisiting: true,
+  });
+  return room;
+}
+
+let sdkHandlersInitialized = false;
+
+function setupEventBridgeListeners() {
   // ── Sprint 1: Furniture placement messages ──
   EventBridge.on("place_item", (payload: PlaceItemPayload) => {
     room?.send(MSG.PLACE_ITEM, payload);
@@ -58,14 +79,6 @@ export async function joinHouseRoom(
 
   EventBridge.on("move_item", (payload: MoveItemPayload) => {
     room?.send(MSG.MOVE_ITEM, payload);
-  });
-
-  // Silence "onMessage() not registered" warnings for simple ack messages
-  room.onMessage("place_ok", () => {
-    /* items are synced via state */
-  });
-  room.onMessage("remove_ok", () => {
-    /* items are synced via state */
   });
 
   // ── Sprint 2: Planting, harvesting, and shopping messages ──
@@ -94,12 +107,44 @@ export async function joinHouseRoom(
     // Leave current room and join friend's room
     room?.leave();
     room = null;
-    joinFriendRoom(data.discordId, discordId);
+    // We need 'myDiscordId' here but it's not passed in data?
+    // We can assume the room stores it or we need to track it?
+    // For now, let's assume the previous room had it.
+    // Wait, joinFriendRoom needs myDiscordId.
+    // We should store it in a module variable or pass it.
+    // For MVP/Demo, let's use a stored variable or fail?
+    // 'currentOwnerId' vs 'myDiscordId'.
+    // Let's store myDiscordId in joinHouseRoom.
+    if (globalMyDiscordId) {
+      joinFriendRoom(data.discordId, globalMyDiscordId);
+    } else {
+      console.error("Missing myDiscordId for visit");
+    }
   });
 
   EventBridge.on("purchase_gems", (payload: PurchaseGemsPayload) => {
     room?.send(MSG.PURCHASE_GEMS, payload);
   });
+}
+
+function registerMessageHandlers(room: Room<HouseState>) {
+  // Listen for state changes and forward to EventBridge
+  room.state.furniture.onAdd((furniture: any, key: string) => {
+    EventBridge.emit("furniture_added", {
+      id: key,
+      itemId: furniture.itemId,
+      gridX: furniture.gridX,
+      gridY: furniture.gridY,
+    });
+  });
+
+  room.state.furniture.onRemove((_furniture: any, key: string) => {
+    EventBridge.emit("furniture_removed", key);
+  });
+
+  // Silence "onMessage() not registered" warnings for simple ack messages
+  room.onMessage("place_ok", () => {});
+  room.onMessage("remove_ok", () => {});
 
   // ── Server responses ──
   room.onMessage("error", (data: { message: string }) => {
@@ -142,26 +187,9 @@ export async function joinHouseRoom(
   room.onMessage("inventory_list", (items: any[]) => {
     EventBridge.emit("inventory_updated", items);
   });
-
-  return room;
 }
 
-/** Visit a friend's house by their Discord ID */
-export async function joinFriendRoom(
-  friendDiscordId: string,
-  myDiscordId: string,
-): Promise<Room<HouseState>> {
-  const c = getClient();
-  room = await c.joinOrCreate("house", {
-    ownerId: friendDiscordId,
-    discordId: myDiscordId,
-  });
-  EventBridge.emit("room_joined", {
-    ownerId: friendDiscordId,
-    isVisiting: true,
-  });
-  return room;
-}
+let globalMyDiscordId = "";
 
 export function getRoom(): Room<HouseState> | null {
   return room;

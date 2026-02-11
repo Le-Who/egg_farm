@@ -35,7 +35,15 @@ export const PetStatus: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
   useEffect(() => {
     const handlePetList = (data: PetInfo[]) => setPets(data);
     const handlePetHatched = (newPet: any) => {
-      setPets((prev) => [...prev, newPet]);
+      // Normalize 'petId' (from hatch_ok) to 'id' (PetInfo)
+      const pet: PetInfo = {
+        ...newPet,
+        id: newPet.petId || newPet.id,
+        level: newPet.level || 1,
+        hunger: newPet.hunger || 100,
+        isActive: false,
+      };
+      setPets((prev) => [...prev, pet]);
     };
 
     EventBridge.on("pets_updated", handlePetList);
