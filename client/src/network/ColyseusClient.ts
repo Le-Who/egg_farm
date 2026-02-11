@@ -1,7 +1,10 @@
 import { Client, Room } from 'colyseus.js';
 import { EventBridge } from '../EventBridge';
 import { MSG } from '../../../shared/messages';
-import type { PlaceItemPayload, RemoveItemPayload, MoveItemPayload } from '../../../shared/messages';
+import type {
+  PlaceItemPayload, RemoveItemPayload, MoveItemPayload,
+  PlantSeedPayload, HarvestPayload, BuyItemPayload,
+} from '../../../shared/messages';
 
 const WS_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
 
@@ -34,7 +37,7 @@ export async function joinHouseRoom(ownerId: string, discordId: string): Promise
     EventBridge.emit('furniture_removed', key);
   });
 
-  // Listen for placement requests from Phaser/React and send to server
+  // ── Sprint 1: Furniture placement messages ──
   EventBridge.on('place_item', (payload: PlaceItemPayload) => {
     room?.send(MSG.PLACE_ITEM, payload);
   });
@@ -47,10 +50,31 @@ export async function joinHouseRoom(ownerId: string, discordId: string): Promise
     room?.send(MSG.MOVE_ITEM, payload);
   });
 
-  // Server responses
+  // ── Sprint 2: Planting, harvesting, and shopping messages ──
+  EventBridge.on('plant_seed', (payload: PlantSeedPayload) => {
+    room?.send(MSG.PLANT_SEED, payload);
+  });
+
+  EventBridge.on('harvest', (payload: HarvestPayload) => {
+    room?.send(MSG.HARVEST, payload);
+  });
+
+  EventBridge.on('buy_item', (payload: BuyItemPayload) => {
+    room?.send(MSG.BUY_ITEM, payload);
+  });
+
+  // ── Server responses ──
   room.onMessage('error', (data: { message: string }) => {
     console.warn('[Server Error]', data.message);
     EventBridge.emit('server_error', data.message);
+  });
+
+  room.onMessage('buy_ok', (data: { newBalance: number }) => {
+    EventBridge.emit('coins_updated', data.newBalance);
+  });
+
+  room.onMessage('harvest_ok', (data: { coins: number }) => {
+    EventBridge.emit('harvest_complete', data);
   });
 
   return room;
@@ -59,3 +83,4 @@ export async function joinHouseRoom(ownerId: string, discordId: string): Promise
 export function getRoom(): Room | null {
   return room;
 }
+

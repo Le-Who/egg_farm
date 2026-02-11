@@ -7,9 +7,11 @@
     "esModuleInterop": true,
     "composite": true,
     "declaration": true,
+    "declarationMap": true,
     "outDir": "./dist",
     "rootDir": "./",
     "skipLibCheck": true
   },
-  "include": ["./**/*.ts"]
+  "include": ["./**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }

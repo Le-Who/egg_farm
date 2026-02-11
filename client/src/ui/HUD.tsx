@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { EventBridge } from '../EventBridge';
 
-export const HUD: React.FC<{ onOpenInventory: () => void }> = ({ onOpenInventory }) => {
+export const HUD: React.FC<{
+  onOpenInventory: () => void;
+  onOpenShop: () => void;
+}> = ({ onOpenInventory, onOpenShop }) => {
   const [coins, setCoins] = useState(500);
   const [error, setError] = useState<string | null>(null);
 
@@ -11,8 +14,14 @@ export const HUD: React.FC<{ onOpenInventory: () => void }> = ({ onOpenInventory
       setTimeout(() => setError(null), 3000);
     };
 
+    const handleCoinUpdate = (newBalance: number) => setCoins(newBalance);
+
     EventBridge.on('server_error', handleError);
-    return () => EventBridge.off('server_error', handleError);
+    EventBridge.on('coins_updated', handleCoinUpdate);
+    return () => {
+      EventBridge.off('server_error', handleError);
+      EventBridge.off('coins_updated', handleCoinUpdate);
+    };
   }, []);
 
   return (
@@ -23,9 +32,14 @@ export const HUD: React.FC<{ onOpenInventory: () => void }> = ({ onOpenInventory
           <span style={styles.coinIcon}>🪙</span>
           <span style={styles.coinCount}>{coins.toLocaleString()}</span>
         </div>
-        <button style={styles.inventoryBtn} onClick={onOpenInventory}>
-          📦 Inventory
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button style={styles.shopBtn} onClick={onOpenShop}>
+            🏪 Shop
+          </button>
+          <button style={styles.inventoryBtn} onClick={onOpenInventory}>
+            📦 Inventory
+          </button>
+        </div>
       </div>
 
       {/* Error toast */}
@@ -67,6 +81,18 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#ffd700',
     fontWeight: 600,
     fontSize: 16,
+  },
+  shopBtn: {
+    background: 'linear-gradient(135deg, #2ecc71, #27ae60)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 12,
+    padding: '8px 16px',
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(46,204,113,0.3)',
+    transition: 'transform 0.15s',
   },
   inventoryBtn: {
     background: 'linear-gradient(135deg, #4a90d9, #357abd)',

@@ -4,7 +4,9 @@ export const MSG = {
   PLACE_ITEM: 'PLACE_ITEM',
   REMOVE_ITEM: 'REMOVE_ITEM',
   MOVE_ITEM: 'MOVE_ITEM',
+  PLANT_SEED: 'PLANT_SEED',
   HARVEST: 'HARVEST',
+  BUY_ITEM: 'BUY_ITEM',
 } as const;
 
 export type MessageType = typeof MSG[keyof typeof MSG];
@@ -27,6 +29,18 @@ export interface MoveItemPayload {
   gridY: number;
 }
 
+export interface PlantSeedPayload {
+  seedItemId: string;
+  gridX: number;
+  gridY: number;
+}
+
 export interface HarvestPayload {
   houseItemId: string;
 }
+
+export interface BuyItemPayload {
+  itemId: string;
+  quantity: number;
+}
+
