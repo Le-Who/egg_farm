@@ -90,6 +90,11 @@ const styles: Record<string, React.CSSProperties> = {
     minWidth: 340, maxHeight: '70vh', overflowY: 'auto' as const,
     border: '1px solid rgba(255,255,255,0.1)',
     boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+    animation: 'slideIn 0.3s ease-out',
+  },
+  '@keyframes slideIn': {
+    from: { opacity: 0, transform: 'scale(0.95)' },
+    to: { opacity: 1, transform: 'scale(1)' },
   },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   title: { color: '#fff', fontSize: 22, fontFamily: "'Inter', sans-serif", fontWeight: 700, margin: 0 },

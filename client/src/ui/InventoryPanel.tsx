@@ -63,9 +63,16 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
     borderRadius: 16,
     padding: 24,
-    minWidth: 320,
+    minWidth: 460,
+    maxHeight: '80vh',
+    overflowY: 'auto' as const,
     border: '1px solid rgba(255,255,255,0.1)',
-    boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+    boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+    animation: 'slideIn 0.3s ease-out',
+  },
+  '@keyframes slideIn': {
+    from: { opacity: 0, transform: 'scale(0.95)' },
+    to: { opacity: 1, transform: 'scale(1)' },
   },
   header: {
     display: 'flex',

@@ -81,6 +81,11 @@ const styles: Record<string, React.CSSProperties> = {
     overflowY: 'auto' as const,
     border: '1px solid rgba(255,215,0,0.2)',
     boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+    animation: 'slideIn 0.3s ease-out',
+  },
+  '@keyframes slideIn': {
+    from: { opacity: 0, transform: 'scale(0.95)' },
+    to: { opacity: 1, transform: 'scale(1)' },
   },
   header: {
     display: 'flex',

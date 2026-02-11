@@ -88,11 +88,23 @@ export async function joinHouseRoom(
     joinFriendRoom(data.discordId, discordId);
   });
 
+  EventBridge.on("purchase_gems", (payload: PurchaseGemsPayload) => {
+    room?.send(MSG.PURCHASE_GEMS, payload);
+  });
+
   // ── Server responses ──
   room.onMessage("error", (data: { message: string }) => {
     console.warn("[Server Error]", data.message);
     EventBridge.emit("server_error", data.message);
   });
+
+  room.onMessage(
+    "purchase_ok",
+    (data: { skuId: string; gemsGranted: number; newGemBalance: number }) => {
+      EventBridge.emit("gems_updated", data.newGemBalance);
+      EventBridge.emit("purchase_complete", data);
+    },
+  );
 
   room.onMessage("buy_ok", (data: { newBalance: number }) => {
     EventBridge.emit("coins_updated", data.newBalance);

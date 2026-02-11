@@ -150,5 +150,10 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     pointerEvents: 'auto',
     zIndex: 2000,
+    animation: 'fadeIn 0.3s ease-out',
+  },
+  '@keyframes fadeIn': {
+    from: { opacity: 0, transform: 'translateY(10px)' },
+    to: { opacity: 1, transform: 'translateY(0)' },
   },
 };

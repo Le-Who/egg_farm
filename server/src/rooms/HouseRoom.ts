@@ -10,6 +10,7 @@ import { getPetTypeConfig } from "../config/pet-config.js";
 import { validateHarvest } from "../services/PlantingService.js";
 import { openEgg } from "../services/IncubationService.js";
 import { ShopService } from "../services/ShopService.js";
+import { IAPService } from "../services/IAPService.js";
 import { MSG } from "../../../shared/messages.js";
 import type {
   PlaceItemPayload,
@@ -20,6 +21,7 @@ import type {
   BuyItemPayload,
   HatchEggPayload,
   SetActivePetPayload,
+  PurchaseGemsPayload,
 } from "../../../shared/messages.js";
 
 // Grid boundaries for the MVP room
@@ -32,6 +34,7 @@ export class HouseRoom extends Room<HouseState> {
   private inventoryRepo = new InventoryRepo();
   private petRepo = new PetRepo();
   private shopService = new ShopService(this.userRepo, this.inventoryRepo);
+  private iapService = new IAPService(this.userRepo, this.inventoryRepo);
   private ownerId: string = "";
 
   async onCreate(options: { ownerId: string }) {
@@ -66,6 +69,9 @@ export class HouseRoom extends Room<HouseState> {
     );
     this.onMessage(MSG.SET_ACTIVE_PET, (client, payload: SetActivePetPayload) =>
       this.handleSetActivePet(client, payload),
+    );
+    this.onMessage(MSG.PURCHASE_GEMS, (client, payload: PurchaseGemsPayload) =>
+      this.handlePurchaseGems(client, payload),
     );
   }
 
@@ -337,6 +343,28 @@ export class HouseRoom extends Room<HouseState> {
     client.send("pet_activated", {
       petId,
       growthSpeedMod: config?.growthSpeedMod ?? 1,
+    });
+  }
+
+  private async handlePurchaseGems(
+    client: Client,
+    payload: PurchaseGemsPayload,
+  ) {
+    const result = await this.iapService.fulfillPurchase(
+      this.ownerId,
+      payload.skuId,
+      payload.purchaseToken,
+    );
+
+    if (!result.success) {
+      client.send("error", { message: result.error ?? "Purchase failed" });
+      return;
+    }
+
+    client.send("purchase_ok", {
+      skuId: payload.skuId,
+      gemsGranted: result.gemsGranted,
+      newGemBalance: result.newGemBalance,
     });
   }
 
