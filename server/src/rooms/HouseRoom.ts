@@ -11,7 +11,7 @@ import { validateHarvest } from "../services/PlantingService.js";
 import { openEgg } from "../services/IncubationService.js";
 import { ShopService } from "../services/ShopService.js";
 import { IAPService } from "../services/IAPService.js";
-import { MSG } from "../../../shared/messages.js";
+import { MSG } from "../../../shared/messages.ts";
 import type {
   PlaceItemPayload,
   RemoveItemPayload,
@@ -22,7 +22,7 @@ import type {
   HatchEggPayload,
   SetActivePetPayload,
   PurchaseGemsPayload,
-} from "../../../shared/messages.js";
+} from "../../../shared/messages.ts";
 
 // Grid boundaries for the MVP room
 const GRID_WIDTH = 10;
