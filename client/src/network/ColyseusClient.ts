@@ -1,6 +1,7 @@
 import { Client, Room } from "colyseus.js";
 import { EventBridge } from "../EventBridge";
 import { MSG } from "../../../shared/messages";
+import { HouseState } from "../../../shared/HouseState";
 import type {
   PlaceItemPayload,
   RemoveItemPayload,
@@ -10,25 +11,25 @@ import type {
   BuyItemPayload,
   HatchEggPayload,
   SetActivePetPayload,
+  PurchaseGemsPayload,
 } from "../../../shared/messages";
 
 const WS_URL = `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}`;
 
 let client: Client;
-let room: Room | null = null;
+let room: Room<HouseState> | null = null;
 
-export function getClient(): Client {
-  if (!client) {
-    client = new Client(WS_URL);
-  }
-  return client;
+function getClient() {
+  const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+  const endpoint = `${protocol}://${window.location.hostname}:3000`;
+  return new Client(endpoint);
 }
 
 /** Join (or create) the player's house room */
 export async function joinHouseRoom(
   ownerId: string,
   discordId: string,
-): Promise<Room> {
+): Promise<Room<HouseState>> {
   const c = getClient();
   room = await c.joinOrCreate("house", { ownerId, discordId });
 
@@ -133,7 +134,7 @@ export async function joinHouseRoom(
 export async function joinFriendRoom(
   friendDiscordId: string,
   myDiscordId: string,
-): Promise<Room> {
+): Promise<Room<HouseState>> {
   const c = getClient();
   room = await c.joinOrCreate("house", {
     ownerId: friendDiscordId,
@@ -146,6 +147,6 @@ export async function joinFriendRoom(
   return room;
 }
 
-export function getRoom(): Room | null {
+export function getRoom(): Room<HouseState> | null {
   return room;
 }

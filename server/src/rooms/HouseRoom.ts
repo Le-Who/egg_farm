@@ -1,5 +1,9 @@
 import { Room, Client } from "@colyseus/core";
-import { HouseState, FurnitureSchema, PlayerSchema } from "./HouseState.js";
+import {
+  HouseState,
+  FurnitureSchema,
+  PlayerSchema,
+} from "../../../shared/HouseState.js";
 import { HouseItemRepo } from "../db/repositories/HouseItemRepo.js";
 import { UserRepo } from "../db/repositories/UserRepo.js";
 import { InventoryRepo } from "../db/repositories/InventoryRepo.js";
@@ -388,7 +392,7 @@ export class HouseRoom extends Room<HouseState> {
 
   private isTileOccupied(x: number, y: number, excludeId?: string): boolean {
     let occupied = false;
-    this.state.furniture.forEach((f, key) => {
+    this.state.furniture.forEach((f: FurnitureSchema, key: string) => {
       if (key !== excludeId && f.gridX === x && f.gridY === y) {
         occupied = true;
       }
