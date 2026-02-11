@@ -48,7 +48,14 @@ export class HouseRoom extends Room<HouseState> {
     console.log(`[HouseRoom] Room created for owner: ${this.ownerId}`);
 
     // Hydrate from DB
-    await this.loadFurniture();
+    try {
+      await this.loadFurniture();
+    } catch (err) {
+      console.error(
+        "[HouseRoom] Failed to load furniture (DB Error?). Starting with empty state.",
+        err,
+      );
+    }
 
     // Register message handlers
     this.onMessage(MSG.PLACE_ITEM, (client, payload: PlaceItemPayload) =>
