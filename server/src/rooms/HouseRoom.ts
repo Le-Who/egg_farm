@@ -99,8 +99,52 @@ export class HouseRoom extends Room<HouseState> {
     // if (!await this.verifyToken(options.token)) ...discordId;
     const player = new PlayerSchema();
     player.odiscordId = options.discordId;
-    player.odisplayName = options.displayName ?? "Guest";
+    player.odisplayName = options.displayName || "Unknown";
     this.state.players.set(client.sessionId, player);
+
+    // Send initial non-schema state (Pets, Inventory)
+    await this.sendPets(client);
+    await this.sendInventory(client);
+  }
+
+  private async sendPets(client: Client) {
+    let pets: any[] = [];
+    try {
+      pets = await this.petRepo.findByUserId(this.ownerId);
+    } catch (err) {
+      console.warn(
+        "[HouseRoom] DB Error loading pets (Demo Mode): Sending mock pet.",
+      );
+      pets = [
+        {
+          id: "demo-pet-1",
+          petType: "slime_grass",
+          name: "Demo Slime",
+          level: 1,
+          hunger: 100,
+          isActive: true,
+          rarity: "common",
+        },
+      ];
+    }
+    client.send("pets_list", pets);
+  }
+
+  private async sendInventory(client: Client) {
+    let items: any[] = [];
+    try {
+      items = await this.inventoryRepo.getByUserId(this.ownerId);
+    } catch (err) {
+      console.warn(
+        "[HouseRoom] DB Error loading inventory (Demo Mode): Sending mock items.",
+      );
+      items = [
+        { itemId: "chair_wood", quantity: 5 },
+        { itemId: "table_wood", quantity: 2 },
+        { itemId: "rug_red", quantity: 1 },
+      ];
+    }
+    client.send("inventory_list", items);
   }
 
   async onLeave(client: Client) {

@@ -143,6 +143,7 @@ export class GameScene extends Phaser.Scene {
   private onFurnitureRemoved: any;
   private onFurnitureMoved: any;
   private onStartPlacement: any;
+  private onRoomJoined: any;
 
   private listenToBridge() {
     this.onStartPlacement = (itemId: string) => {
@@ -166,11 +167,15 @@ export class GameScene extends Phaser.Scene {
     }) => {
       this.moveFurnitureSprite(data.id, data.gridX, data.gridY);
     };
+    this.onRoomJoined = () => {
+      this.clearAllFurniture();
+    };
 
     EventBridge.on("start_placement", this.onStartPlacement);
     EventBridge.on("furniture_added", this.onFurnitureAdded);
     EventBridge.on("furniture_removed", this.onFurnitureRemoved);
     EventBridge.on("furniture_moved", this.onFurnitureMoved);
+    EventBridge.on("room_joined", this.onRoomJoined);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
     this.events.once(Phaser.Scenes.Events.DESTROY, this.shutdown, this);
@@ -185,6 +190,12 @@ export class GameScene extends Phaser.Scene {
       EventBridge.off("furniture_removed", this.onFurnitureRemoved);
     if (this.onFurnitureMoved)
       EventBridge.off("furniture_moved", this.onFurnitureMoved);
+    if (this.onRoomJoined) EventBridge.off("room_joined", this.onRoomJoined);
+  }
+
+  private clearAllFurniture() {
+    this.placedItems.forEach((placed) => placed.sprite.destroy());
+    this.placedItems.clear();
   }
 
   // ── Furniture Sprites ────────────────────────────────────────────

@@ -135,6 +135,14 @@ export async function joinHouseRoom(
     },
   );
 
+  room.onMessage("pets_list", (pets: any[]) => {
+    EventBridge.emit("pets_updated", pets);
+  });
+
+  room.onMessage("inventory_list", (items: any[]) => {
+    EventBridge.emit("inventory_updated", items);
+  });
+
   return room;
 }
 
