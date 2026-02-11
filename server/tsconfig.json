@@ -10,6 +10,7 @@
     "declaration": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
+    "experimentalDecorators": true,
     "paths": {
       "@shared/*": ["../shared/*"]
     }
