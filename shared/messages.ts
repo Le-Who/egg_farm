@@ -9,6 +9,7 @@ export const MSG = {
   BUY_ITEM: "BUY_ITEM",
   HATCH_EGG: "HATCH_EGG",
   SET_ACTIVE_PET: "SET_ACTIVE_PET",
+  PURCHASE_GEMS: "PURCHASE_GEMS",
 } as const;
 
 export type MessageType = (typeof MSG)[keyof typeof MSG];
@@ -54,4 +55,10 @@ export interface HatchEggPayload {
 
 export interface SetActivePetPayload {
   petId: string;
+}
+
+export interface PurchaseGemsPayload {
+  skuId: string;
+  /** Discord purchase token for verification (stub for MVP) */
+  purchaseToken?: string;
 }
