@@ -1,6 +1,12 @@
-import Phaser from 'phaser';
-import { cartToIso, snapToGrid, isInBounds, TILE_WIDTH, TILE_HEIGHT } from '../grid/IsoGrid';
-import { EventBridge } from '../../EventBridge';
+import Phaser from "phaser";
+import {
+  cartToIso,
+  snapToGrid,
+  isInBounds,
+  TILE_WIDTH,
+  TILE_HEIGHT,
+} from "../grid/IsoGrid";
+import { EventBridge } from "../../EventBridge";
 
 const GRID_W = 10;
 const GRID_H = 10;
@@ -32,7 +38,7 @@ export class GameScene extends Phaser.Scene {
   private placingItemId: string | null = null;
 
   constructor() {
-    super({ key: 'GameScene' });
+    super({ key: "GameScene" });
   }
 
   create() {
@@ -45,7 +51,9 @@ export class GameScene extends Phaser.Scene {
   // ── Grid Rendering ───────────────────────────────────────────────
 
   private drawGrid() {
-    const graphics = this.add.graphics({ lineStyle: { width: 1, color: 0x3a3a5c, alpha: 0.6 } });
+    const graphics = this.add.graphics({
+      lineStyle: { width: 1, color: 0x3a3a5c, alpha: 0.6 },
+    });
 
     for (let gx = 0; gx < GRID_W; gx++) {
       for (let gy = 0; gy < GRID_H; gy++) {
@@ -71,12 +79,17 @@ export class GameScene extends Phaser.Scene {
 
   private createHighlight() {
     this.highlight = this.add.polygon(
-      0, 0,
+      0,
+      0,
       [
-        0, -TILE_HEIGHT / 2,
-        TILE_WIDTH / 2, 0,
-        0, TILE_HEIGHT / 2,
-        -TILE_WIDTH / 2, 0,
+        0,
+        -TILE_HEIGHT / 2,
+        TILE_WIDTH / 2,
+        0,
+        0,
+        TILE_HEIGHT / 2,
+        -TILE_WIDTH / 2,
+        0,
       ],
       0x44aaff,
       0.35,
@@ -89,7 +102,7 @@ export class GameScene extends Phaser.Scene {
   // ── Pointer Events ───────────────────────────────────────────────
 
   private setupPointerEvents() {
-    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+    this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
       const worldX = pointer.worldX - ORIGIN_X;
       const worldY = pointer.worldY - ORIGIN_Y;
       const snapped = snapToGrid(worldX, worldY);
@@ -103,7 +116,7 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       if (!this.placingItemId) return;
 
       const worldX = pointer.worldX - ORIGIN_X;
@@ -112,7 +125,7 @@ export class GameScene extends Phaser.Scene {
 
       if (isInBounds(snapped.x, snapped.y, GRID_W, GRID_H)) {
         // Send placement request to server via EventBridge
-        EventBridge.emit('place_item', {
+        EventBridge.emit("place_item", {
           itemId: this.placingItemId,
           gridX: snapped.x,
           gridY: snapped.y,
@@ -124,26 +137,54 @@ export class GameScene extends Phaser.Scene {
 
   // ── Bridge Listeners (React ↔ Phaser + Server ↔ Phaser) ────────
 
+  // ── Bridge Listeners (React ↔ Phaser + Server ↔ Phaser) ────────
+
+  private onFurnitureAdded: any;
+  private onFurnitureRemoved: any;
+  private onFurnitureMoved: any;
+  private onStartPlacement: any;
+
   private listenToBridge() {
-    // React tells Phaser to enter placement mode
-    EventBridge.on('start_placement', (itemId: string) => {
+    this.onStartPlacement = (itemId: string) => {
       this.placingItemId = itemId;
-    });
-
-    // Server confirmed placement — render sprite
-    EventBridge.on('furniture_added', (data: { id: string; itemId: string; gridX: number; gridY: number }) => {
+    };
+    this.onFurnitureAdded = (data: {
+      id: string;
+      itemId: string;
+      gridX: number;
+      gridY: number;
+    }) => {
       this.addFurnitureSprite(data.id, data.itemId, data.gridX, data.gridY);
-    });
-
-    // Server confirmed removal
-    EventBridge.on('furniture_removed', (id: string) => {
+    };
+    this.onFurnitureRemoved = (id: string) => {
       this.removeFurnitureSprite(id);
-    });
-
-    // Server confirmed move
-    EventBridge.on('furniture_moved', (data: { id: string; gridX: number; gridY: number }) => {
+    };
+    this.onFurnitureMoved = (data: {
+      id: string;
+      gridX: number;
+      gridY: number;
+    }) => {
       this.moveFurnitureSprite(data.id, data.gridX, data.gridY);
-    });
+    };
+
+    EventBridge.on("start_placement", this.onStartPlacement);
+    EventBridge.on("furniture_added", this.onFurnitureAdded);
+    EventBridge.on("furniture_removed", this.onFurnitureRemoved);
+    EventBridge.on("furniture_moved", this.onFurnitureMoved);
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
+    this.events.once(Phaser.Scenes.Events.DESTROY, this.shutdown, this);
+  }
+
+  private shutdown() {
+    if (this.onStartPlacement)
+      EventBridge.off("start_placement", this.onStartPlacement);
+    if (this.onFurnitureAdded)
+      EventBridge.off("furniture_added", this.onFurnitureAdded);
+    if (this.onFurnitureRemoved)
+      EventBridge.off("furniture_removed", this.onFurnitureRemoved);
+    if (this.onFurnitureMoved)
+      EventBridge.off("furniture_moved", this.onFurnitureMoved);
   }
 
   // ── Furniture Sprites ────────────────────────────────────────────

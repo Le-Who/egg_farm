@@ -60,6 +60,14 @@ export async function joinHouseRoom(
     room?.send(MSG.MOVE_ITEM, payload);
   });
 
+  // Silence "onMessage() not registered" warnings for simple ack messages
+  room.onMessage("place_ok", () => {
+    /* items are synced via state */
+  });
+  room.onMessage("remove_ok", () => {
+    /* items are synced via state */
+  });
+
   // ── Sprint 2: Planting, harvesting, and shopping messages ──
   EventBridge.on("plant_seed", (payload: PlantSeedPayload) => {
     room?.send(MSG.PLANT_SEED, payload);
