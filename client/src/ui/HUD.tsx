@@ -4,7 +4,9 @@ import { EventBridge } from '../EventBridge';
 export const HUD: React.FC<{
   onOpenInventory: () => void;
   onOpenShop: () => void;
-}> = ({ onOpenInventory, onOpenShop }) => {
+  onOpenPets: () => void;
+  onOpenNeighbors: () => void;
+}> = ({ onOpenInventory, onOpenShop, onOpenPets, onOpenNeighbors }) => {
   const [coins, setCoins] = useState(500);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,6 +35,12 @@ export const HUD: React.FC<{
           <span style={styles.coinCount}>{coins.toLocaleString()}</span>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
+          <button style={styles.neighborsBtn} onClick={onOpenNeighbors}>
+            👋 Friends
+          </button>
+          <button style={styles.petsBtn} onClick={onOpenPets}>
+            🐾 Pets
+          </button>
           <button style={styles.shopBtn} onClick={onOpenShop}>
             🏪 Shop
           </button>
@@ -81,6 +89,30 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#ffd700',
     fontWeight: 600,
     fontSize: 16,
+  },
+  neighborsBtn: {
+    background: 'linear-gradient(135deg, #9b59b6, #8e44ad)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 12,
+    padding: '8px 16px',
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(155,89,182,0.3)',
+    transition: 'transform 0.15s',
+  },
+  petsBtn: {
+    background: 'linear-gradient(135deg, #ff9800, #f57c00)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 12,
+    padding: '8px 16px',
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(255,152,0,0.3)',
+    transition: 'transform 0.15s',
   },
   shopBtn: {
     background: 'linear-gradient(135deg, #2ecc71, #27ae60)',

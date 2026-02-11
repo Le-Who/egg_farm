@@ -1,6 +1,6 @@
-import type pg from 'pg';
-import { getPool } from '../pool.js';
-import type { User } from '../../../shared/types.js';
+import type pg from "pg";
+import { getPool } from "../pool.js";
+import type { User } from "../../../shared/types.js";
 
 export class UserRepo {
   private pool: pg.Pool;
@@ -39,7 +39,10 @@ export class UserRepo {
     const existing = await this.findByDiscordId(discordId);
     if (existing) {
       // Touch last_login
-      await this.pool.query('UPDATE users SET last_login = NOW() WHERE id = $1', [existing.id]);
+      await this.pool.query(
+        "UPDATE users SET last_login = NOW() WHERE id = $1",
+        [existing.id],
+      );
       return { ...existing, lastLogin: new Date() };
     }
     return this.create(discordId);
@@ -47,9 +50,17 @@ export class UserRepo {
 
   async updateCoins(userId: string, delta: number): Promise<number> {
     const { rows } = await this.pool.query(
-      'UPDATE users SET coins = coins + $2 WHERE id = $1 RETURNING coins',
+      "UPDATE users SET coins = coins + $2 WHERE id = $1 RETURNING coins",
       [userId, delta],
     );
     return rows[0]?.coins ?? 0;
+  }
+
+  async updateGems(userId: string, delta: number): Promise<number> {
+    const { rows } = await this.pool.query(
+      "UPDATE users SET gems = gems + $2 WHERE id = $1 RETURNING gems",
+      [userId, delta],
+    );
+    return rows[0]?.gems ?? 0;
   }
 }
